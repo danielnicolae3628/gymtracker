@@ -23,7 +23,7 @@ export function ProgressTab() {
   const [metric, setMetric] = useState<Metric>('e1rm');
   const [bwDate, setBwDate] = useState(todayStr());
   const [bwWeight, setBwWeight] = useState('');
-  const [bwLiftLabel, setBwLiftLabel] = useState('');
+  const [bwLiftExerciseId, setBwLiftExerciseId] = useState('');
   const [bwLiftWeight, setBwLiftWeight] = useState('');
   const [bwLiftReps, setBwLiftReps] = useState('');
   const [bwChartView, setBwChartView] = useState<BwChartView>('weight');
@@ -67,9 +67,10 @@ export function ProgressTab() {
     const liftReps = bwLiftReps === '' ? undefined : parseInt(bwLiftReps, 10);
     if (liftWeight != null && isNaN(liftWeight)) { toast('Enter a valid lift weight'); return; }
     if (liftReps != null && isNaN(liftReps)) { toast('Enter a valid rep count'); return; }
-    addOrUpdateBodyweight(date, weight, bwLiftLabel.trim() || undefined, liftWeight, liftReps);
+    const liftLabel = bwLiftExerciseId ? getExercise(bwLiftExerciseId)?.name : undefined;
+    addOrUpdateBodyweight(date, weight, liftLabel, liftWeight, liftReps);
     setBwWeight('');
-    setBwLiftLabel('');
+    setBwLiftExerciseId('');
     setBwLiftWeight('');
     setBwLiftReps('');
     toast('Bodyweight logged');
@@ -183,11 +184,11 @@ export function ProgressTab() {
           <div className="field-row">
             <label className="grow">
               Exercise <span className="muted">(optional)</span>
-              <input
-                type="text"
-                placeholder="e.g. Bench Press"
-                value={bwLiftLabel}
-                onChange={e => setBwLiftLabel(e.target.value)}
+              <ExerciseSelect
+                exercises={data.exercises}
+                value={bwLiftExerciseId}
+                onChange={setBwLiftExerciseId}
+                noneLabel="— none —"
               />
             </label>
             <label className="grow">

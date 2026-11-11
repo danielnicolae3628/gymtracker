@@ -4,9 +4,10 @@ interface ExerciseSelectProps {
   exercises: Exercise[];
   value: string;
   onChange: (id: string) => void;
+  noneLabel?: string;
 }
 
-export function ExerciseSelect({ exercises, value, onChange }: ExerciseSelectProps) {
+export function ExerciseSelect({ exercises, value, onChange, noneLabel }: ExerciseSelectProps) {
   const byCat: Record<string, Exercise[]> = {};
   exercises.forEach(ex => {
     (byCat[ex.category] = byCat[ex.category] || []).push(ex);
@@ -15,6 +16,7 @@ export function ExerciseSelect({ exercises, value, onChange }: ExerciseSelectPro
 
   return (
     <select value={value} onChange={e => onChange(e.target.value)}>
+      {noneLabel && <option value="">{noneLabel}</option>}
       {categories.map(cat => (
         <optgroup label={cat} key={cat}>
           {byCat[cat]
