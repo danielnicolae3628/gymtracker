@@ -21,6 +21,23 @@ Node/Express/MongoDB API.
 All data lives in a local MongoDB database via the `server/` API — nothing
 leaves your machine. Export a backup (Data tab) if you want a portable copy.
 
+## Screenshots
+
+_Shown with example data for illustration._
+
+| Log | History |
+| --- | --- |
+| ![Log tab](docs/screenshots/log.jpg) | ![History tab](docs/screenshots/history.jpg) |
+
+| Progress | Exercises | Data |
+| --- | --- | --- |
+| ![Progress tab](docs/screenshots/progress.jpg) | ![Exercises tab](docs/screenshots/exercises.jpg) | ![Data tab](docs/screenshots/data.jpg) |
+
+The Progress tab's bodyweight tracker also has a combined view, normalizing
+bodyweight, lift weight, and reps onto one chart so trends are comparable:
+
+![Tracker combined chart](docs/screenshots/tracker-combined.jpg)
+
 ## Running it
 
 You need MongoDB running locally (default `mongodb://127.0.0.1:27017`) and
