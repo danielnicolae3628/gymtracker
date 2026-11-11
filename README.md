@@ -21,9 +21,8 @@ Node/Express/MongoDB API.
 All data lives in a local MongoDB database via the `server/` API — nothing
 leaves your machine. Export a backup (Data tab) if you want a portable copy.
 
-## Screenshots
+## App samples
 
-_Shown with example data for illustration._
 
 | Log | History |
 | --- | --- |
