@@ -32,6 +32,18 @@ html, body {
   flex-direction: column;
 }
 
+.app-loading {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
 /* ---------- Topbar ---------- */
 .topbar {
   position: sticky;

@@ -1,10 +1,9 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { AppData, BodyweightEntry, Exercise, SeriesPoint, SetEntry, Unit, WorkoutEntry } from '../lib/types';
 import { DEFAULT_EXERCISES } from '../lib/defaultExercises';
 import { epley, uid } from '../lib/utils';
 import { useToast } from './ToastContext';
-
-const STORAGE_KEY = 'ironlog.v1';
+import { API_BASE, fetchAppData, saveAppData } from '../lib/api';
 
 function freshData(): AppData {
   return {
@@ -12,25 +11,6 @@ function freshData(): AppData {
     workouts: [],
     bodyweight: [],
   };
-}
-
-function loadInitialData(): AppData {
-  let raw: string | null = null;
-  try {
-    raw = localStorage.getItem(STORAGE_KEY);
-  } catch {
-    /* ignore */
-  }
-  if (raw) {
-    try {
-      const parsed = JSON.parse(raw) as AppData;
-      if (!parsed.bodyweight) parsed.bodyweight = [];
-      return parsed;
-    } catch {
-      /* fall through to fresh data */
-    }
-  }
-  return freshData();
 }
 
 interface DataContextValue {
@@ -54,16 +34,34 @@ interface DataContextValue {
 const DataContext = createContext<DataContextValue | null>(null);
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const [data, setData] = useState<AppData>(loadInitialData);
+  const [data, setData] = useState<AppData>({ exercises: [], workouts: [], bodyweight: [] });
+  const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const toast = useToast();
+  const skipNextSave = useRef(true);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    } catch {
-      toast('⚠️ Could not save — storage may be full or unavailable');
+    fetchAppData()
+      .then(d => {
+        setData(d);
+        setLoaded(true);
+      })
+      .catch(() => {
+        setLoadError(true);
+        setLoaded(true);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!loaded) return;
+    if (skipNextSave.current) {
+      skipNextSave.current = false;
+      return;
     }
-  }, [data, toast]);
+    saveAppData(data).catch(() => {
+      toast('⚠️ Could not save — backend unreachable');
+    });
+  }, [data, loaded, toast]);
 
   const getExercise = useCallback((id: string) => data.exercises.find(e => e.id === id), [data.exercises]);
 
@@ -260,6 +258,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
       clearAll,
     ],
   );
+
+  if (!loaded) {
+    return <div className="app-loading">Loading your data…</div>;
+  }
+
+  if (loadError) {
+    return (
+      <div className="app-loading">
+        ⚠️ Could not reach the backend at {API_BASE}.<br />
+        Make sure the server (and MongoDB) are running, then reload.
+      </div>
+    );
+  }
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }

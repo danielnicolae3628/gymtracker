@@ -1,0 +1,15 @@
+export const DEFAULT_EXERCISES = [
+  { name: 'Bench Press', category: 'Chest', unit: 'kg' },
+  { name: 'Incline Dumbbell Press', category: 'Chest', unit: 'kg' },
+  { name: 'Squat', category: 'Legs', unit: 'kg' },
+  { name: 'Leg Press', category: 'Legs', unit: 'kg' },
+  { name: 'Deadlift', category: 'Back', unit: 'kg' },
+  { name: 'Barbell Row', category: 'Back', unit: 'kg' },
+  { name: 'Pull Up', category: 'Back', unit: 'kg' },
+  { name: 'Lat Pulldown', category: 'Back', unit: 'kg' },
+  { name: 'Overhead Press', category: 'Shoulders', unit: 'kg' },
+  { name: 'Lateral Raise', category: 'Shoulders', unit: 'kg' },
+  { name: 'Bicep Curl', category: 'Arms', unit: 'kg' },
+  { name: 'Tricep Pushdown', category: 'Arms', unit: 'kg' },
+  { name: 'Plank', category: 'Core', unit: 'kg' },
+] as const;
