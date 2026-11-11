@@ -23,7 +23,19 @@ leaves your machine. Export a backup (Data tab) if you want a portable copy.
 
 ## Screenshots
 
-<img width="1729" height="853" alt="Power Log screenshot" src="https://github.com/user-attachments/assets/e4e8a3fd-c3e4-4ff9-bbd5-498d523f39e0" />
+_Shown with example data for illustration._
+
+| Log | History |
+| --- | --- |
+| ![Log tab](docs/screenshots/log.jpg) | ![History tab](docs/screenshots/history.jpg) |
+
+| Progress | Tracker (combined view) |
+| --- | --- |
+| <img width="1729" height="853" alt="Progress tab" src="https://github.com/user-attachments/assets/e4e8a3fd-c3e4-4ff9-bbd5-498d523f39e0" /> | ![Tracker combined chart](docs/screenshots/tracker-combined.jpg) |
+
+| Exercises | Data |
+| --- | --- |
+| ![Exercises tab](docs/screenshots/exercises.jpg) | ![Data tab](docs/screenshots/data.jpg) |
 
 ## Running it
 
