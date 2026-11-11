@@ -21,6 +21,10 @@ Node/Express/MongoDB API.
 All data lives in a local MongoDB database via the `server/` API — nothing
 leaves your machine. Export a backup (Data tab) if you want a portable copy.
 
+## Screenshots
+
+<img width="1729" height="853" alt="Power Log screenshot" src="https://github.com/user-attachments/assets/e4e8a3fd-c3e4-4ff9-bbd5-498d523f39e0" />
+
 ## Running it
 
 You need MongoDB running locally (default `mongodb://127.0.0.1:27017`) and
@@ -101,5 +105,4 @@ operations (JSON import, "clear all data").
 ## Estimated 1RM
 
 Progress charts use the Epley formula: `1RM ≈ weight × (1 + reps / 30)`.
-<img width="1729" height="853" alt="image" src="https://github.com/user-attachments/assets/e4e8a3fd-c3e4-4ff9-bbd5-498d523f39e0" />
 
