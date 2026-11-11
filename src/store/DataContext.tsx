@@ -45,7 +45,7 @@ interface DataContextValue {
   findLastSetForExercise: (exerciseId: string) => SetEntry | null;
   getBestE1RM: (exerciseId: string, beforeDate?: string) => number;
   getExerciseSeries: (exerciseId: string) => SeriesPoint[];
-  addOrUpdateBodyweight: (date: string, weight: number) => void;
+  addOrUpdateBodyweight: (date: string, weight: number, liftLabel?: string, liftWeight?: number, liftReps?: number) => void;
   deleteBodyweight: (id: string) => void;
   importData: (parsed: unknown) => void;
   clearAll: () => void;
@@ -191,16 +191,24 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return points;
   }, [data.workouts]);
 
-  const addOrUpdateBodyweight = useCallback((date: string, weight: number) => {
-    setData(d => {
-      const existing = d.bodyweight.find(b => b.date === date);
-      if (existing) {
-        return { ...d, bodyweight: d.bodyweight.map(b => (b.date === date ? { ...b, weight } : b)) };
-      }
-      const entry: BodyweightEntry = { id: uid(), date, weight };
-      return { ...d, bodyweight: [...d.bodyweight, entry] };
-    });
-  }, []);
+  const addOrUpdateBodyweight = useCallback(
+    (date: string, weight: number, liftLabel?: string, liftWeight?: number, liftReps?: number) => {
+      setData(d => {
+        const existing = d.bodyweight.find(b => b.date === date);
+        if (existing) {
+          return {
+            ...d,
+            bodyweight: d.bodyweight.map(b =>
+              b.date === date ? { ...b, weight, liftLabel, liftWeight, liftReps } : b,
+            ),
+          };
+        }
+        const entry: BodyweightEntry = { id: uid(), date, weight, liftLabel, liftWeight, liftReps };
+        return { ...d, bodyweight: [...d.bodyweight, entry] };
+      });
+    },
+    [],
+  );
 
   const deleteBodyweight = useCallback((id: string) => {
     setData(d => ({ ...d, bodyweight: d.bodyweight.filter(b => b.id !== id) }));

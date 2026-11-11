@@ -5,6 +5,9 @@ import { fmtDateShort, todayStr } from '../lib/utils';
 import type { Metric } from '../lib/types';
 import { ExerciseSelect } from './ExerciseSelect';
 import { LineChart, type ChartPoint } from './LineChart';
+import { BodyweightComboChart } from './BodyweightComboChart';
+
+type BwChartView = 'weight' | 'reps' | 'combo';
 
 const METRIC_KEY: Record<Metric, 'bestE1rm' | 'topWeight' | 'volume'> = {
   e1rm: 'bestE1rm',
@@ -20,6 +23,10 @@ export function ProgressTab() {
   const [metric, setMetric] = useState<Metric>('e1rm');
   const [bwDate, setBwDate] = useState(todayStr());
   const [bwWeight, setBwWeight] = useState('');
+  const [bwLiftLabel, setBwLiftLabel] = useState('');
+  const [bwLiftWeight, setBwLiftWeight] = useState('');
+  const [bwLiftReps, setBwLiftReps] = useState('');
+  const [bwChartView, setBwChartView] = useState<BwChartView>('weight');
 
   if (exerciseId && !data.exercises.some(e => e.id === exerciseId)) {
     setExerciseId(data.exercises[0]?.id ?? '');
@@ -36,6 +43,10 @@ export function ProgressTab() {
     () => getComputedStyle(document.documentElement).getPropertyValue('--accent-2').trim(),
     [],
   );
+  const accent3Color = useMemo(
+    () => getComputedStyle(document.documentElement).getPropertyValue('--accent-3').trim(),
+    [],
+  );
 
   const chartPoints: ChartPoint[] = series.map(p => ({
     label: fmtDateShort(p.date),
@@ -44,14 +55,23 @@ export function ProgressTab() {
 
   const bwEntries = data.bodyweight.slice().sort((a, b) => a.date.localeCompare(b.date));
   const bwPoints: ChartPoint[] = bwEntries.map(e => ({ label: fmtDateShort(e.date), value: e.weight }));
+  const repsEntries = bwEntries.filter(e => e.liftReps != null);
+  const repsPoints: ChartPoint[] = repsEntries.map(e => ({ label: fmtDateShort(e.date), value: e.liftReps! }));
   const bwRecent = bwEntries.slice().reverse().slice(0, 8);
 
   function handleAddBodyweight() {
     const date = bwDate || todayStr();
     const weight = parseFloat(bwWeight);
     if (isNaN(weight) || weight <= 0) { toast('Enter a valid bodyweight'); return; }
-    addOrUpdateBodyweight(date, weight);
+    const liftWeight = bwLiftWeight === '' ? undefined : parseFloat(bwLiftWeight);
+    const liftReps = bwLiftReps === '' ? undefined : parseInt(bwLiftReps, 10);
+    if (liftWeight != null && isNaN(liftWeight)) { toast('Enter a valid lift weight'); return; }
+    if (liftReps != null && isNaN(liftReps)) { toast('Enter a valid rep count'); return; }
+    addOrUpdateBodyweight(date, weight, bwLiftLabel.trim() || undefined, liftWeight, liftReps);
     setBwWeight('');
+    setBwLiftLabel('');
+    setBwLiftWeight('');
+    setBwLiftReps('');
     toast('Bodyweight logged');
   }
 
@@ -140,7 +160,7 @@ export function ProgressTab() {
         </div>
 
         <div className="card">
-          <h2>Bodyweight</h2>
+          <h2>Tracker</h2>
           <div className="field-row">
             <label>
               Date
@@ -160,19 +180,70 @@ export function ProgressTab() {
             </label>
             <button className="btn btn-primary" onClick={handleAddBodyweight}>Add</button>
           </div>
+          <div className="field-row">
+            <label className="grow">
+              Exercise <span className="muted">(optional)</span>
+              <input
+                type="text"
+                placeholder="e.g. Bench Press"
+                value={bwLiftLabel}
+                onChange={e => setBwLiftLabel(e.target.value)}
+              />
+            </label>
+            <label className="grow">
+              Lift weight <span className="muted">(optional)</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.5"
+                min="0"
+                placeholder="e.g. 60"
+                value={bwLiftWeight}
+                onChange={e => setBwLiftWeight(e.target.value)}
+              />
+            </label>
+            <label className="grow">
+              Reps <span className="muted">(optional)</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                step="1"
+                min="0"
+                placeholder="e.g. 6"
+                value={bwLiftReps}
+                onChange={e => setBwLiftReps(e.target.value)}
+              />
+            </label>
+          </div>
 
           {!bwEntries.length ? (
             <p className="empty-state">No bodyweight entries yet.</p>
           ) : (
             <>
-              <LineChart points={bwPoints} color={accent2Color} height={220} />
+              <div className="chart-toggle">
+                <button className={`chip${bwChartView === 'weight' ? ' active' : ''}`} onClick={() => setBwChartView('weight')}>Bodyweight</button>
+                <button className={`chip${bwChartView === 'reps' ? ' active' : ''}`} onClick={() => setBwChartView('reps')}>Reps</button>
+                <button className={`chip${bwChartView === 'combo' ? ' active' : ''}`} onClick={() => setBwChartView('combo')}>Combined</button>
+              </div>
+
+              {bwChartView === 'weight' && <LineChart points={bwPoints} color={accent2Color} height={220} />}
+              {bwChartView === 'reps' && (
+                repsPoints.length
+                  ? <LineChart points={repsPoints} color={accent3Color} height={220} />
+                  : <p className="empty-state">No rep entries logged yet.</p>
+              )}
+              {bwChartView === 'combo' && <BodyweightComboChart entries={bwEntries} height={220} />}
+
               <table className="simple-table">
-                <thead><tr><th>Date</th><th>Weight</th><th></th></tr></thead>
+                <thead><tr><th>Date</th><th>Weight</th><th>Exercise</th><th>Lift</th><th>Reps</th><th></th></tr></thead>
                 <tbody>
                   {bwRecent.map(e => (
                     <tr key={e.id}>
                       <td>{fmtDateShort(e.date)}</td>
                       <td>{e.weight}</td>
+                      <td>{e.liftLabel || '—'}</td>
+                      <td>{e.liftWeight ?? '—'}</td>
+                      <td>{e.liftReps ?? '—'}</td>
                       <td>
                         <button className="del-x btn-sm btn-icon" onClick={() => deleteBodyweight(e.id)}>Delete</button>
                       </td>

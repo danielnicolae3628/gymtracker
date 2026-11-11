@@ -29,6 +29,9 @@ export interface BodyweightEntry {
   id: string;
   date: string; // YYYY-MM-DD
   weight: number;
+  liftLabel?: string;
+  liftWeight?: number;
+  liftReps?: number;
 }
 
 export interface AppData {

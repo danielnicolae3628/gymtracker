@@ -20,7 +20,7 @@ export default function App() {
       <header className="topbar">
         <div className="brand">
           <span className="brand-icon">🏋️</span>
-          <span className="brand-name">Iron Log</span>
+          <span className="brand-name">Power Log</span>
         </div>
         <TabNav active={activeTab} onChange={setActiveTab} />
       </header>
@@ -33,7 +33,7 @@ export default function App() {
         {activeTab === 'data' && <DataTab />}
       </main>
 
-      <footer className="footer muted">Iron Log · your data never leaves this device</footer>
+      <footer className="footer muted">Power Log · your data never leaves this device</footer>
     </div>
   );
 }

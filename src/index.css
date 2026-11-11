@@ -375,6 +375,12 @@ table.simple-table th { color: var(--text-muted); font-weight: 600; font-size: 0
 
 canvas { width: 100%; height: auto; background: var(--bg-elev-2); border-radius: 10px; border: 1px solid var(--border); }
 
+/* ---------- Combo chart ---------- */
+.combo-legend { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 8px; }
+.combo-legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--text-muted); font-weight: 600; }
+.combo-legend-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: 0 0 auto; }
+.combo-note { margin-top: 6px; font-size: 0.75rem; }
+
 /* ---------- Exercise management ---------- */
 .exercise-manage-list { display: flex; flex-direction: column; gap: 8px; max-height: 560px; overflow-y: auto; }
 .exercise-manage-group { margin-bottom: 6px; }
