@@ -1,6 +1,48 @@
 import { Schema, model } from 'mongoose';
 
-const SetEntrySchema = new Schema(
+export interface SetEntry {
+  weight: number;
+  reps: number;
+  rpe: number | null;
+}
+
+export interface WorkoutEntry {
+  id: string;
+  exerciseId: string;
+  sets: SetEntry[];
+}
+
+export interface Workout {
+  id: string;
+  date: string;
+  entries: WorkoutEntry[];
+}
+
+export interface Exercise {
+  id: string;
+  name: string;
+  category: string;
+  unit: 'kg' | 'lb';
+}
+
+export interface BodyweightEntry {
+  id: string;
+  date: string;
+  weight: number;
+  liftLabel?: string;
+  liftWeight?: number;
+  liftReps?: number;
+}
+
+export interface AppData {
+  _id: string;
+  exercises: Exercise[];
+  workouts: Workout[];
+  bodyweight: BodyweightEntry[];
+  __v: number;
+}
+
+const SetEntrySchema = new Schema<SetEntry>(
   {
     weight: { type: Number, required: true },
     reps: { type: Number, required: true },
@@ -9,7 +51,7 @@ const SetEntrySchema = new Schema(
   { _id: false },
 );
 
-const WorkoutEntrySchema = new Schema(
+const WorkoutEntrySchema = new Schema<WorkoutEntry>(
   {
     id: { type: String, required: true },
     exerciseId: { type: String, required: true },
@@ -18,7 +60,7 @@ const WorkoutEntrySchema = new Schema(
   { _id: false },
 );
 
-const WorkoutSchema = new Schema(
+const WorkoutSchema = new Schema<Workout>(
   {
     id: { type: String, required: true },
     date: { type: String, required: true },
@@ -27,7 +69,7 @@ const WorkoutSchema = new Schema(
   { _id: false },
 );
 
-const ExerciseSchema = new Schema(
+const ExerciseSchema = new Schema<Exercise>(
   {
     id: { type: String, required: true },
     name: { type: String, required: true },
@@ -37,7 +79,7 @@ const ExerciseSchema = new Schema(
   { _id: false },
 );
 
-const BodyweightEntrySchema = new Schema(
+const BodyweightEntrySchema = new Schema<BodyweightEntry>(
   {
     id: { type: String, required: true },
     date: { type: String, required: true },

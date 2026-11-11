@@ -26,15 +26,15 @@ export function DataTab() {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
         const parsed = JSON.parse(reader.result as string);
         if (!confirm('Import will replace all current data. Continue?')) return;
-        importData(parsed);
+        await importData(parsed);
         setStatus('Import successful.');
         toast('Data imported');
       } catch {
-        setStatus('Import failed: invalid JSON file.');
+        setStatus('Import failed: invalid JSON file, or the backend is unreachable.');
         toast('Import failed');
       }
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -42,11 +42,15 @@ export function DataTab() {
     reader.readAsText(file);
   }
 
-  function handleClearAll() {
+  async function handleClearAll() {
     if (!confirm('This will permanently delete ALL workouts, exercises, and bodyweight entries. This cannot be undone. Continue?')) return;
     if (!confirm('Are you absolutely sure? Consider exporting a backup first.')) return;
-    clearAll();
-    toast('All data cleared');
+    try {
+      await clearAll();
+      toast('All data cleared');
+    } catch {
+      toast('⚠️ Could not clear data — backend unreachable');
+    }
   }
 
   const totalWorkouts = data.workouts.length;
@@ -62,7 +66,7 @@ export function DataTab() {
     <section className="tab-panel active">
       <div className="card">
         <h2>Backup &amp; restore</h2>
-        <p className="muted">All data is stored locally in this browser (localStorage). Export a backup regularly, especially before clearing browser data.</p>
+        <p className="muted">All data is stored in a local MongoDB database via the backend. Export a backup regularly, especially before clearing data.</p>
         <div className="field-row">
           <button className="btn btn-primary" onClick={handleExport}>Export JSON</button>
           <label className="btn" htmlFor="importFile">Import JSON</label>

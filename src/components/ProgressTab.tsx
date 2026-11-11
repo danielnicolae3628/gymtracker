@@ -59,7 +59,7 @@ export function ProgressTab() {
   const repsPoints: ChartPoint[] = repsEntries.map(e => ({ label: fmtDateShort(e.date), value: e.liftReps! }));
   const bwRecent = bwEntries.slice().reverse().slice(0, 8);
 
-  function handleAddBodyweight() {
+  async function handleAddBodyweight() {
     const date = bwDate || todayStr();
     const weight = parseFloat(bwWeight);
     if (isNaN(weight) || weight <= 0) { toast('Enter a valid bodyweight'); return; }
@@ -68,7 +68,8 @@ export function ProgressTab() {
     if (liftWeight != null && isNaN(liftWeight)) { toast('Enter a valid lift weight'); return; }
     if (liftReps != null && isNaN(liftReps)) { toast('Enter a valid rep count'); return; }
     const liftLabel = bwLiftExerciseId ? getExercise(bwLiftExerciseId)?.name : undefined;
-    addOrUpdateBodyweight(date, weight, liftLabel, liftWeight, liftReps);
+    const ok = await addOrUpdateBodyweight(date, weight, liftLabel, liftWeight, liftReps);
+    if (!ok) return; // context already showed an error toast
     setBwWeight('');
     setBwLiftExerciseId('');
     setBwLiftWeight('');

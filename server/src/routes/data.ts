@@ -1,31 +1,20 @@
 import { Router } from 'express';
-import { randomUUID } from 'node:crypto';
 import { AppDataModel } from '../models/AppData.js';
-import { DEFAULT_EXERCISES } from '../defaultExercises.js';
+import { getOrCreateDoc, SINGLETON_ID } from '../lib/store.js';
+import { validateBody } from '../lib/validateBody.js';
+import { fullDataInputSchema } from '../validation.js';
 
 const router = Router();
-const SINGLETON_ID = 'singleton';
 
 router.get('/data', async (_req, res) => {
-  let doc = await AppDataModel.findById(SINGLETON_ID).lean();
-  if (!doc) {
-    const created = await AppDataModel.create({
-      _id: SINGLETON_ID,
-      exercises: DEFAULT_EXERCISES.map(e => ({ id: randomUUID(), ...e })),
-      workouts: [],
-      bodyweight: [],
-    });
-    doc = created.toObject();
-  }
+  const doc = await getOrCreateDoc();
   res.json(doc);
 });
 
-router.put('/data', async (req, res) => {
+// Bulk replace — used only for explicit, whole-dataset operations
+// (JSON import, "clear all data"), never for routine single-field edits.
+router.put('/data', validateBody(fullDataInputSchema), async (req, res) => {
   const { exercises, workouts, bodyweight } = req.body;
-  if (!Array.isArray(exercises) || !Array.isArray(workouts) || !Array.isArray(bodyweight)) {
-    res.status(400).json({ error: 'Invalid payload: exercises, workouts, and bodyweight must be arrays' });
-    return;
-  }
   const doc = await AppDataModel.findByIdAndUpdate(
     SINGLETON_ID,
     { _id: SINGLETON_ID, exercises, workouts, bodyweight },

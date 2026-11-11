@@ -21,15 +21,16 @@ export function ExercisesTab({ focusNameToken }: ExercisesTabProps) {
   const [category, setCategory] = useState(EXERCISE_CATEGORIES[0]);
   const [unit, setUnit] = useState<Unit>('kg');
 
-  function handleAdd() {
+  async function handleAdd() {
     if (!name.trim()) { toast('Enter an exercise name'); return; }
-    const ok = addExercise(name, category, unit);
-    if (!ok) { toast('That exercise already exists'); return; }
+    const result = await addExercise(name, category, unit);
+    if (result === 'duplicate') { toast('That exercise already exists'); return; }
+    if (result === 'error') return; // context already showed an error toast
     setName('');
     toast('Exercise added');
   }
 
-  function handleDelete(id: string, exName: string) {
+  async function handleDelete(id: string, exName: string) {
     const count = usageCount(id);
     if (count > 0) {
       const ok = confirm(
@@ -37,7 +38,7 @@ export function ExercisesTab({ focusNameToken }: ExercisesTabProps) {
       );
       if (!ok) return;
     }
-    deleteExercise(id);
+    await deleteExercise(id);
     toast('Exercise deleted');
   }
 

@@ -1,9 +1,21 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { AppData, BodyweightEntry, Exercise, SeriesPoint, SetEntry, Unit, WorkoutEntry } from '../lib/types';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import type { AppData, Exercise, SeriesPoint, SetEntry, Unit } from '../lib/types';
 import { DEFAULT_EXERCISES } from '../lib/defaultExercises';
 import { epley, uid } from '../lib/utils';
 import { useToast } from './ToastContext';
-import { API_BASE, fetchAppData, saveAppData } from '../lib/api';
+import {
+  API_BASE,
+  ApiError,
+  commitSetsApi,
+  createExercise,
+  deleteBodyweightApi,
+  deleteExerciseApi,
+  fetchAppData,
+  removeEntryApi,
+  removeSetApi,
+  saveAppData,
+  upsertBodyweightApi,
+} from '../lib/api';
 
 function freshData(): AppData {
   return {
@@ -13,32 +25,42 @@ function freshData(): AppData {
   };
 }
 
+export type AddExerciseResult = 'created' | 'duplicate' | 'error';
+
 interface DataContextValue {
   data: AppData;
   getExercise: (id: string) => Exercise | undefined;
-  addExercise: (name: string, category: string, unit: Unit) => boolean;
-  deleteExercise: (id: string) => void;
+  addExercise: (name: string, category: string, unit: Unit) => Promise<AddExerciseResult>;
+  deleteExercise: (id: string) => Promise<boolean>;
   usageCount: (exerciseId: string) => number;
-  commitSets: (date: string, exerciseId: string, sets: SetEntry[]) => boolean;
-  removeSet: (workoutId: string, entryId: string, setIndex: number) => void;
-  removeEntry: (workoutId: string, entryId: string) => void;
+  /** Returns whether the new sets set a PR, or null if the save failed. */
+  commitSets: (date: string, exerciseId: string, sets: SetEntry[]) => Promise<boolean | null>;
+  removeSet: (workoutId: string, entryId: string, setIndex: number) => Promise<void>;
+  removeEntry: (workoutId: string, entryId: string) => Promise<void>;
   findLastSetForExercise: (exerciseId: string) => SetEntry | null;
   getBestE1RM: (exerciseId: string, beforeDate?: string) => number;
   getExerciseSeries: (exerciseId: string) => SeriesPoint[];
-  addOrUpdateBodyweight: (date: string, weight: number, liftLabel?: string, liftWeight?: number, liftReps?: number) => void;
-  deleteBodyweight: (id: string) => void;
-  importData: (parsed: unknown) => void;
-  clearAll: () => void;
+  addOrUpdateBodyweight: (
+    date: string,
+    weight: number,
+    liftLabel?: string,
+    liftWeight?: number,
+    liftReps?: number,
+  ) => Promise<boolean>;
+  deleteBodyweight: (id: string) => Promise<void>;
+  importData: (parsed: unknown) => Promise<void>;
+  clearAll: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextValue | null>(null);
+
+const SAVE_FAILED_MSG = '⚠️ Could not save — backend unreachable';
 
 export function DataProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<AppData>({ exercises: [], workouts: [], bodyweight: [] });
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const toast = useToast();
-  const skipNextSave = useRef(true);
 
   useEffect(() => {
     fetchAppData()
@@ -52,26 +74,24 @@ export function DataProvider({ children }: { children: ReactNode }) {
       });
   }, []);
 
-  useEffect(() => {
-    if (!loaded) return;
-    if (skipNextSave.current) {
-      skipNextSave.current = false;
-      return;
-    }
-    saveAppData(data).catch(() => {
-      toast('⚠️ Could not save — backend unreachable');
-    });
-  }, [data, loaded, toast]);
-
   const getExercise = useCallback((id: string) => data.exercises.find(e => e.id === id), [data.exercises]);
 
-  const addExercise = useCallback((name: string, category: string, unit: Unit): boolean => {
-    const trimmed = name.trim();
-    if (!trimmed) return false;
-    if (data.exercises.some(e => e.name.toLowerCase() === trimmed.toLowerCase())) return false;
-    setData(d => ({ ...d, exercises: [...d.exercises, { id: uid(), name: trimmed, category, unit }] }));
-    return true;
-  }, [data.exercises]);
+  const addExercise = useCallback(
+    async (name: string, category: string, unit: Unit): Promise<AddExerciseResult> => {
+      const trimmed = name.trim();
+      if (!trimmed) return 'error';
+      try {
+        const { exercises } = await createExercise(trimmed, category, unit);
+        setData(d => ({ ...d, exercises }));
+        return 'created';
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 409) return 'duplicate';
+        toast(SAVE_FAILED_MSG);
+        return 'error';
+      }
+    },
+    [toast],
+  );
 
   const usageCount = useCallback((exerciseId: string) => {
     return data.workouts.reduce(
@@ -80,9 +100,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
     );
   }, [data.workouts]);
 
-  const deleteExercise = useCallback((id: string) => {
-    setData(d => ({ ...d, exercises: d.exercises.filter(e => e.id !== id) }));
-  }, []);
+  const deleteExercise = useCallback(
+    async (id: string): Promise<boolean> => {
+      try {
+        const { exercises } = await deleteExerciseApi(id);
+        setData(d => ({ ...d, exercises }));
+        return true;
+      } catch {
+        toast(SAVE_FAILED_MSG);
+        return false;
+      }
+    },
+    [toast],
+  );
 
   const getBestE1RM = useCallback((exerciseId: string, beforeDate?: string) => {
     let best = 0;
@@ -100,66 +130,47 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [data.workouts]);
 
   const commitSets = useCallback(
-    (date: string, exerciseId: string, sets: SetEntry[]): boolean => {
+    async (date: string, exerciseId: string, sets: SetEntry[]): Promise<boolean | null> => {
       if (!sets.length) return false;
       const bestBefore = getBestE1RM(exerciseId);
       const bestNew = Math.max(...sets.map(s => epley(s.weight, s.reps)));
       const wasPR = bestNew > bestBefore;
 
-      setData(d => {
-        const workouts = d.workouts.slice();
-        let wIdx = workouts.findIndex(w => w.date === date);
-        let workout;
-        if (wIdx === -1) {
-          workout = { id: uid(), date, entries: [] as WorkoutEntry[] };
-          wIdx = workouts.length;
-          workouts.push(workout);
-        } else {
-          workout = { ...workouts[wIdx], entries: workouts[wIdx].entries.slice() };
-          workouts[wIdx] = workout;
-        }
-        const eIdx = workout.entries.findIndex(e => e.exerciseId === exerciseId);
-        if (eIdx === -1) {
-          workout.entries.push({ id: uid(), exerciseId, sets: sets.map(s => ({ ...s })) });
-        } else {
-          const entry = workout.entries[eIdx];
-          workout.entries[eIdx] = { ...entry, sets: [...entry.sets, ...sets.map(s => ({ ...s }))] };
-        }
-        return { ...d, workouts };
-      });
-
-      return wasPR;
+      try {
+        const { workouts } = await commitSetsApi(date, exerciseId, sets);
+        setData(d => ({ ...d, workouts }));
+        return wasPR;
+      } catch {
+        toast(SAVE_FAILED_MSG);
+        return null;
+      }
     },
-    [getBestE1RM],
+    [getBestE1RM, toast],
   );
 
-  const removeSet = useCallback((workoutId: string, entryId: string, setIndex: number) => {
-    setData(d => {
-      const workouts = d.workouts
-        .map(w => {
-          if (w.id !== workoutId) return w;
-          const entries = w.entries
-            .map(e => {
-              if (e.id !== entryId) return e;
-              const sets = e.sets.filter((_, i) => i !== setIndex);
-              return { ...e, sets };
-            })
-            .filter(e => e.sets.length > 0);
-          return { ...w, entries };
-        })
-        .filter(w => w.entries.length > 0);
-      return { ...d, workouts };
-    });
-  }, []);
+  const removeSet = useCallback(
+    async (workoutId: string, entryId: string, setIndex: number) => {
+      try {
+        const { workouts } = await removeSetApi(workoutId, entryId, setIndex);
+        setData(d => ({ ...d, workouts }));
+      } catch {
+        toast(SAVE_FAILED_MSG);
+      }
+    },
+    [toast],
+  );
 
-  const removeEntry = useCallback((workoutId: string, entryId: string) => {
-    setData(d => {
-      const workouts = d.workouts
-        .map(w => (w.id === workoutId ? { ...w, entries: w.entries.filter(e => e.id !== entryId) } : w))
-        .filter(w => w.entries.length > 0);
-      return { ...d, workouts };
-    });
-  }, []);
+  const removeEntry = useCallback(
+    async (workoutId: string, entryId: string) => {
+      try {
+        const { workouts } = await removeEntryApi(workoutId, entryId);
+        setData(d => ({ ...d, workouts }));
+      } catch {
+        toast(SAVE_FAILED_MSG);
+      }
+    },
+    [toast],
+  );
 
   const findLastSetForExercise = useCallback((exerciseId: string): SetEntry | null => {
     const workouts = data.workouts
@@ -190,36 +201,45 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [data.workouts]);
 
   const addOrUpdateBodyweight = useCallback(
-    (date: string, weight: number, liftLabel?: string, liftWeight?: number, liftReps?: number) => {
-      setData(d => {
-        const existing = d.bodyweight.find(b => b.date === date);
-        if (existing) {
-          return {
-            ...d,
-            bodyweight: d.bodyweight.map(b =>
-              b.date === date ? { ...b, weight, liftLabel, liftWeight, liftReps } : b,
-            ),
-          };
-        }
-        const entry: BodyweightEntry = { id: uid(), date, weight, liftLabel, liftWeight, liftReps };
-        return { ...d, bodyweight: [...d.bodyweight, entry] };
-      });
+    async (date: string, weight: number, liftLabel?: string, liftWeight?: number, liftReps?: number) => {
+      try {
+        const { bodyweight } = await upsertBodyweightApi(date, weight, liftLabel, liftWeight, liftReps);
+        setData(d => ({ ...d, bodyweight }));
+        return true;
+      } catch {
+        toast(SAVE_FAILED_MSG);
+        return false;
+      }
+    },
+    [toast],
+  );
+
+  const deleteBodyweight = useCallback(
+    async (id: string) => {
+      try {
+        const { bodyweight } = await deleteBodyweightApi(id);
+        setData(d => ({ ...d, bodyweight }));
+      } catch {
+        toast(SAVE_FAILED_MSG);
+      }
+    },
+    [toast],
+  );
+
+  const importData = useCallback(
+    async (parsed: unknown) => {
+      const p = parsed as Partial<AppData>;
+      if (!p.exercises || !p.workouts) throw new Error('Invalid format');
+      const full: AppData = { exercises: p.exercises, workouts: p.workouts, bodyweight: p.bodyweight || [] };
+      const saved = await saveAppData(full);
+      setData(saved);
     },
     [],
   );
 
-  const deleteBodyweight = useCallback((id: string) => {
-    setData(d => ({ ...d, bodyweight: d.bodyweight.filter(b => b.id !== id) }));
-  }, []);
-
-  const importData = useCallback((parsed: unknown) => {
-    const p = parsed as Partial<AppData>;
-    if (!p.exercises || !p.workouts) throw new Error('Invalid format');
-    setData({ exercises: p.exercises, workouts: p.workouts, bodyweight: p.bodyweight || [] });
-  }, []);
-
-  const clearAll = useCallback(() => {
-    setData(freshData());
+  const clearAll = useCallback(async () => {
+    const saved = await saveAppData(freshData());
+    setData(saved);
   }, []);
 
   const value = useMemo<DataContextValue>(

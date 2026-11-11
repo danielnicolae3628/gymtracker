@@ -55,10 +55,11 @@ export function LogTab({ onGoToExercises }: LogTabProps) {
     setPendingSets(ps => ps.filter((_, i) => i !== index));
   }
 
-  function handleCommit() {
+  async function handleCommit() {
     if (!exerciseId) { toast('Choose an exercise first'); return; }
     if (!pendingSets.length) return;
-    const wasPR = commitSets(logDate, exerciseId, pendingSets);
+    const wasPR = await commitSets(logDate, exerciseId, pendingSets);
+    if (wasPR === null) return; // save failed; context already showed an error toast
     setPendingSets([]);
     toast(wasPR ? '🏆 New PR saved!' : 'Sets saved');
   }
