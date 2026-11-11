@@ -1,4 +1,4 @@
-# Iron Log — Gym Progress Tracker
+# Power Log — Gym Progress Tracker
 
 A gym progress tracker: a React + TypeScript + Vite frontend backed by a
 Node/Express/MongoDB API.
