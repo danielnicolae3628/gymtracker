@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(where node *)",
+      "Bash(where npx *)",
+      "Bash(where npm *)",
+      "Bash(where py *)",
+      "Bash(where python3 *)",
+      "Bash(py --version)",
+      "Bash(\"/c/Users/Daniel/AppData/Local/Microsoft/WindowsApps/python3.exe\" -c \"print\\('hi'\\)\")"
+    ]
+  }
+}
