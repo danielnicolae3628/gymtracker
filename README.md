@@ -54,6 +54,18 @@ npm run build        # compiles to server/dist/
 npm start
 ```
 
+## Testing
+
+```bash
+# frontend (Vitest + Testing Library) — DataContext business logic
+npm test
+
+# backend (Vitest + Supertest + mongodb-memory-server) — API behavior,
+# validation, and concurrency
+cd server
+npm test
+```
+
 ## Project structure
 
 ```
@@ -66,15 +78,25 @@ src/                  frontend (React + TS)
 
 server/               backend (Express + TS + MongoDB)
   src/
-    index.ts          app setup, DB connection, server start
+    index.ts          entry point: DB connection + server start
+    app.ts            Express app wiring (importable by tests without starting a server)
     db.ts             MongoDB connection (Mongoose)
-    models/AppData.ts schema for the single app-data document
-    routes/data.ts     GET/PUT /api/data
+    lib/store.ts       atomic get-or-create + compare-and-swap mutation helper
+    lib/validateBody.ts zod request-validation middleware
+    validation.ts      zod schemas for each endpoint's input
+    models/AppData.ts schema + TS types for the single app-data document
+    routes/           data.ts (bulk GET/PUT), exercises.ts, workouts.ts, bodyweight.ts
+  tests/              Vitest + Supertest API tests, incl. concurrency stress tests
 ```
 
 The backend stores everything as one document (exercises, workouts,
 bodyweight) — no accounts, single user, matching how the app has always
 worked. `GET /api/data` seeds the default exercise list on first run.
+Routine edits (adding a set, a bodyweight entry, an exercise, deletes) go
+through small per-resource endpoints that apply an atomic compare-and-swap
+against the document, so concurrent writers can't silently overwrite each
+other's changes. `PUT /api/data` still exists for whole-dataset replace
+operations (JSON import, "clear all data").
 
 ## Estimated 1RM
 
