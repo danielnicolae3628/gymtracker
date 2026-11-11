@@ -1,4 +1,4 @@
-# Iron Log — Gym Progress Tracker
+# Power Log — Gym Progress Tracker
 
 A gym progress tracker: a React + TypeScript + Vite frontend backed by a
 Node/Express/MongoDB API.
@@ -101,3 +101,5 @@ operations (JSON import, "clear all data").
 ## Estimated 1RM
 
 Progress charts use the Epley formula: `1RM ≈ weight × (1 + reps / 30)`.
+<img width="1729" height="853" alt="image" src="https://github.com/user-attachments/assets/e4e8a3fd-c3e4-4ff9-bbd5-498d523f39e0" />
+
