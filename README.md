@@ -1,7 +1,7 @@
 # Iron Log — Gym Progress Tracker
 
-A lightweight, offline-first gym progress tracker. No build step, no
-dependencies, no account — just open `index.html` in a browser.
+A lightweight, offline-first gym progress tracker, now built with React,
+TypeScript, and Vite.
 
 ## Features
 
@@ -23,17 +23,32 @@ or devices, or keep it safe before clearing site data.
 
 ## Running it
 
-No server needed — just open `index.html` directly:
-
 ```bash
-start index.html
+npm install
+npm run dev
 ```
 
-Or serve it locally if you prefer (e.g. for testing on a phone on the same
-network):
+Then open the printed `http://localhost:8934` URL.
+
+### Build for production
 
 ```bash
-npx serve .
+npm run build
+npm run preview
+```
+
+`npm run build` type-checks with `tsc` and outputs static files to `dist/`,
+which can be hosted anywhere (no server-side code required).
+
+## Project structure
+
+```
+src/
+  lib/            data types, default exercises, date/math helpers
+  store/          React context providers (app data + toasts), localStorage persistence
+  components/     one component per tab, plus the line chart and exercise select
+  App.tsx         tab navigation and layout
+  main.tsx        React entry point
 ```
 
 ## Estimated 1RM
